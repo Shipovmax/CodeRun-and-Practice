@@ -1,10 +1,19 @@
+"""
+Библиотеки
+"""
+
 import math
 from fractions import Fraction
 from decimal import Decimal, getcontext, ROUND_HALF_UP
 import re
 import os
 
-getcontext().prec = 15
+getcontext().prec = 15  # Устанавливаю 15 знаков после запитой во всем файле
+
+
+"""
+    Цвета для терминала 
+"""
 
 
 class Colors:
@@ -18,6 +27,10 @@ class Colors:
     BOLD = "\033[1m"
     END = "\033[0m"
 
+
+"""
+    Инициализирую все числа от 0 до 99
+"""
 
 number_words = {
     "ноль": 0,
@@ -50,6 +63,11 @@ number_words = {
     "девяносто": 90,
 }
 
+
+"""
+    Инициализирую степени от 2 до 20
+"""
+
 fraction_words = {
     "вторая": 2,
     "третья": 3,
@@ -71,6 +89,11 @@ fraction_words = {
     "девятнадцатая": 19,
     "двадцатая": 20,
 }
+
+
+"""
+    Инициализирую математические функции
+"""
 
 operators = {
     "плюс": "+",
