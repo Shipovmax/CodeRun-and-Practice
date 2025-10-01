@@ -1,1 +1,0 @@
-# Практика из Stepik и CodeRun 

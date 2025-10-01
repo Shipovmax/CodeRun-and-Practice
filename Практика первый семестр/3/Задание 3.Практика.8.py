@@ -1,1 +1,0 @@
-print(bool(list(range(10))))
