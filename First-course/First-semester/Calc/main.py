@@ -10,7 +10,6 @@ import os
 
 getcontext().prec = 15  # Устанавливаю 15 знаков после запитой во всем файле
 
-
 """
     Цвета для терминала
 """
@@ -63,7 +62,6 @@ number_words = {
     "девяносто": 90,
 }
 
-
 """
     Инициализирую степени от 2 до 20
 """
@@ -89,7 +87,6 @@ fraction_words = {
     "девятнадцатая": 19,
     "двадцатая": 20,
 }
-
 
 """
     Инициализирую математические функции
@@ -144,9 +141,9 @@ def number_to_text(number):
             result += number_to_text_simple(whole) + " и "
         if frac:
             result += (
-                number_to_text_simple(frac.numerator)
-                + " "
-                + ordinal_from_denominator(frac.denominator)
+                    number_to_text_simple(frac.numerator)
+                    + " "
+                    + ordinal_from_denominator(frac.denominator)
             )
         return result or "ноль"
     if isinstance(number, float):
