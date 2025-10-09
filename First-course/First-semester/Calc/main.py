@@ -5,7 +5,6 @@
 import math
 from fractions import Fraction
 from decimal import Decimal, getcontext, ROUND_HALF_UP
-import re
 import os
 
 getcontext().prec = 15  # Устанавливаю 15 знаков после запитой во всем файле
