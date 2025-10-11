@@ -140,9 +140,9 @@ def number_to_text(number):
             result += number_to_text_simple(whole) + " и "
         if frac:
             result += (
-                    number_to_text_simple(frac.numerator)
-                    + " "
-                    + ordinal_from_denominator(frac.denominator)
+                number_to_text_simple(frac.numerator)
+                + " "
+                + ordinal_from_denominator(frac.denominator)
             )
         return result or "ноль"
     if isinstance(number, float):
