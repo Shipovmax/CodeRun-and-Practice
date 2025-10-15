@@ -7,24 +7,28 @@
 Если такого значения L не существует, следует вывести -1.
 """
 
-import math
+a, b, S = map(int, input().split())
 
+# Пусть исходный квадрат имел сторону L.
+# После того как Вася отпилил a и b, площадь осталась:
+# (L - a) * (L - b) = S
+# => L² - L*(a + b) + a*b - S = 0
+# => решаем квадратное уравнение относительно L
 
-def find_L(a, b, S):
-    a = int(input())
-    b = int(input())
-    S = int(input())
-    D = (a - b) ** 2 + 4 * S
-    root = math.isqrt(D)
-    if root * root != D:
-        return -1
-    numerator = a + b + root
-    if numerator % 2 != 0:
-        return -1
-    L = numerator // 2
-    # Проверим, что L >= max(a, b) - но как мы показали, это всегда выполняется для L1
-    return print(L)
+D = (a + b)**2 - 4 * (a * b - S)  # дискриминант
 
+if D < 0:
+    print(-1)
+else:
+    from math import sqrt, isclose
+    L1 = ((a + b) + sqrt(D)) / 2
+    L2 = ((a + b) - sqrt(D)) / 2
 
-if __name__ == "__find_L__":
-    find_L()
+    # выбираем целое положительное решение
+    L = -1
+    for x in (L1, L2):
+        if x > max(a, b) and isclose(x, round(x)) and x.is_integer():
+            L = int(round(x))
+            break
+
+    print(L if L != -1 else -1)
