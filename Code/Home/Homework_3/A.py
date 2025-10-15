@@ -7,12 +7,24 @@
 Если такого значения L не существует, следует вывести -1.
 """
 
-
-def main():
-    A_dlina = int(input())
-    B_shirina = int(input())
-    S_ploshad = int(input())
+import math
 
 
-if __name__ == "__main__":
-    main()
+def find_L(a, b, S):
+    a = int(input())
+    b = int(input())
+    S = int(input())
+    D = (a - b) ** 2 + 4 * S
+    root = math.isqrt(D)
+    if root * root != D:
+        return -1
+    numerator = a + b + root
+    if numerator % 2 != 0:
+        return -1
+    L = numerator // 2
+    # Проверим, что L >= max(a, b) - но как мы показали, это всегда выполняется для L1
+    return print(L)
+
+
+if __name__ == "__find_L__":
+    find_L()
