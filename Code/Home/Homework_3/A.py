@@ -15,12 +15,13 @@ a, b, S = map(int, input().split())
 # => L² - L*(a + b) + a*b - S = 0
 # => решаем квадратное уравнение относительно L
 
-D = (a + b)**2 - 4 * (a * b - S)  # дискриминант
+D = (a + b) ** 2 - 4 * (a * b - S)  # дискриминант
 
 if D < 0:
     print(-1)
 else:
     from math import sqrt, isclose
+
     L1 = ((a + b) + sqrt(D)) / 2
     L2 = ((a + b) - sqrt(D)) / 2
 
