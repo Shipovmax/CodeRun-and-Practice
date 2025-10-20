@@ -1,5 +1,8 @@
+# ---------- Библиотеки ----------
+
 from __future__ import annotations
 import re
+from copy import deepcopy
 from fractions import Fraction
 from math import sin, cos, tan, pi, factorial
 from typing import List, Tuple, Union, Optional
@@ -31,6 +34,7 @@ SIMPLE_NUM = {
     "восемнадцать": 18,
     "девятнадцать": 19,
 }
+
 TENS = {
     "двадцать": 20,
     "тридцать": 30,
@@ -54,7 +58,7 @@ HUNDREDS = {
     "девятьсот": 900,
 }
 
-# Разряды (тысячи, миллионы) — частичная поддержка (до миллионов)
+# Разряды (тысячи, миллионы)
 SCALES = {
     "тысяча": 10 ** 3,
     "тысячи": 10 ** 3,
@@ -84,17 +88,14 @@ OPERATORS = {
     "в степени": {"symbol": "^", "precedence": 3, "assoc": "right"},
 }
 
-# Функции (в виде ключевых слов)
-FUNCTIONS = {"синус", "косинус", "тангенс"}
-# Комбинаторные операции — будем распознавать по фразам
-COMBINATORICS = {"перестановок", "размещений", "сочетаний"}
+FUNCTIONS = {"синус", "косинус", "тангенс"} # Функции (в виде ключевых слов)
+COMBINATORICS = {"перестановок", "размещений", "сочетаний"} # Комбинаторные операции — будем распознавать по фразам
 
 # Скобки — словесные формы
 OPEN_PAREN = ("скобка открывается",)
 CLOSE_PAREN = ("скобка закрывается",)
 
 # Регулярные шаблоны для токенизации фраз
-# Важно: порядок фраз имеет значение — более длинные фразы сначала
 PHRASE_TOKENS = [
     "остаток от деления",
     "скобка открывается",
@@ -115,30 +116,21 @@ PHRASE_TOKENS = [
 
 # ---------- Исключения / классы ошибок ----------
 class CalcError(Exception):
-    """Базовая ошибка калькулятора — для диагностики пользователю"""
-
     pass
-
 
 class ParseError(CalcError):
     pass
-
 
 class MathError(CalcError):
     pass
 
 
 # ---------- Утилиты по работе с дробями и форматом вывода ----------
-def fraction_to_decimal_with_period(
-        fr: Fraction, max_nonrepeat: int = 10, max_period: int = 6
-) -> Tuple[str, Optional[str]]:
+def fraction_to_decimal_with_period(fr: Fraction, max_nonrepeat: int = 10, max_period: int = 6) -> Tuple[str, Optional[str]]:
     """
     Переводим дробь в десятичную запись с выделением периодической части.
-    Возвращаем (non_repeating_part, repeating_part_or_None).
-    non_repeating_part включает целую и неповторяющуюся дробную часть, например "0.125"
-    repeating_part — строка повторяющейся последовательности без точки, или None.
-    Реализовано через симуляцию деления (long division), фиксируем позиции остатков.
     """
+
     # Анализируем знак
     sign = "-" if fr < 0 else ""
     fr = abs(fr)
@@ -149,7 +141,6 @@ def fraction_to_decimal_with_period(
     if remainder == 0:
         return f"{sign}{integer_part}", None
 
-    # Выполняем деление в школе и отслеживаем остатков
     remainder_positions = {}
     decimals = []
     pos = 0
@@ -168,9 +159,8 @@ def fraction_to_decimal_with_period(
 
     # Формируем части
     if repeating_start is None:
-        # нет периода в исследуемой длине — просто вернём неповторяющуюся дробь
         dec_str = "".join(decimals)
-        return f"{sign}{integer_part}.{dec_str}", None
+        return f"{sign}{integer_part}.{dec_str}", None # нет периода в исследуемой длине — просто вернём неповторяющуюся дробь
     else:
         nonrep = "".join(decimals[:repeating_start])
         rep = "".join(decimals[repeating_start:])
@@ -181,14 +171,8 @@ def fraction_to_decimal_with_period(
 
 
 def fraction_to_mixed_and_words(fr: Fraction) -> str:
-    """
-    Преобразует Fraction в человеко-читаемый текст:
-     - если целое, возвращает слово-целое
-     - если дробь со знаменателем 100 или 1000, возвращает 'и X сотых/тысячных'
-     - если дробь может быть выражена как смешанная дробь — формат 'целая и числитель знаменатель'
-     - если дробь не имеет удобной дробной формы, пытается найти период и вывести 'целая и <непериод> и <период> в периоде'
-    Возвращает строку на русском.
-    """
+    """ Возвращает строку на русском """
+    
     # Сохраняем знак
     sign_prefix = ""
     if fr < 0:
@@ -196,88 +180,68 @@ def fraction_to_mixed_and_words(fr: Fraction) -> str:
         fr = abs(fr)
 
     # Целая часть
-    целая = fr.numerator // fr.denominator
-    дробь = Fraction(fr.numerator % fr.denominator, fr.denominator)
+    entire_function = fr.numerator // fr.denominator
+    fraction_function = Fraction(fr.numerator % fr.denominator, fr.denominator)
 
     parts = []
-    if целая != 0:
-        parts.append(int_to_words(целая))
+    if entire_function != 0:
+        parts.append(int_to_words(entire_function))
 
-    if дробь == 0:
+    if fraction_function == 0:
         return (sign_prefix + parts[0]) if parts else sign_prefix + "ноль"
 
     # Сначала пробуем специальные разряды: сотые/тысячные/миллионные (100,1000,1000000)
-    for denom_word, denom_value in [
-        (100, "сотых"),
-        (1000, "тысячных"),
-        (10 ** 6, "миллионных"),
-    ]:
-        if дробь.denominator == denom_value if False else False:
-            pass  # (не используется) -- оставлено для логики ниже
+    for denom_word, denom_value in [ (100, "сотых"), (1000, "тысячных"), (10 ** 6, "миллионных"), ]:
 
-    # Если знаменатель делится на 2^a * 5^b => конечная десятичная дробь
-    # попробуем представить в виде сотых/тысячных/миллионных (до 1e6)
+        if fraction_function.denominator == denom_value if False else False:
+            pass # оставлено для логики ниже
+
+    # Если znaminatel_function делится на 2^a * 5^b => конечная десятичная fraction_function
     dec = None
     if is_terminating_decimal(fr):
-        # представим десятичную дробь с достаточной точностью (до 6 знаков)
-        dec_str, period = fraction_to_decimal_with_period(
-            fr, max_nonrepeat=10, max_period=6
-        )
-        # dec_str выглядит как 'целая.дробь' или 'целая'
+        dec_str, period = fraction_to_decimal_with_period(fr, max_nonrepeat=10, max_period=6)
         if period is None:
             # разберём дробную часть
             if "." in dec_str:
                 int_part_str, frac_part_str = dec_str.split(".", 1)
-                # пробуем представить как сотые/тысячные/миллионные
                 length = len(frac_part_str)
                 numerator = int(frac_part_str)
                 if length in (2, 3, 6):
                     denom_map = {2: "сотых", 3: "тысячных", 6: "миллионных"}
                     denom_word = denom_map[length]
-                    # убираем ведущие нули при чтении числа (например "05" -> "пять")
+
                     num_words = int_to_words(numerator)
                     if int(int_part_str) == 0:
                         return f"{sign_prefix}ноль и {num_words} {denom_word}"
                     else:
                         return f"{sign_prefix}{int_to_words(int(int_part_str))} и {num_words} {denom_word}"
                 else:
-                    # не специальный разряд — выводим как 'целая.дробь' словами цифр
-                    # попытаемся округлить до тысячных по заданию основной: округление до 3 знаков
                     rounded_frac = round(float(fr - int(fr)), 3)
-                    # если rounding makes fraction 0 or whole, re-evaluate
-                    rounded_frac_frac = Fraction(
-                        str(round(fr - int(fr), 3))
-                    ).limit_denominator()
+                    rounded_frac_frac = Fraction(str(round(fr - int(fr), 3))).limit_denominator()
                     if rounded_frac_frac == 0:
                         return f"{sign_prefix}{int_to_words(int(fr))}"
-                    # иначе — вывести как "и X сотых/тысячных" если попадает
-                    # попытаемся представить в сотых/тысячных
                     denom_try = {2: "сотых", 3: "тысячных"}
                     for l, word in denom_try.items():
                         numerator_try = int(round(fr - int(fr), l) * (10 ** l))
-                        if abs(
-                                (Fraction(numerator_try, 10 ** l) - (fr - int(fr)))
-                        ) < Fraction(1, 10 ** l):
+                        if abs((Fraction(numerator_try, 10 ** l) - (fr - int(fr)))) < Fraction(1, 10 ** l):
                             if int(fr) == 0:
                                 return f"{sign_prefix}ноль и {int_to_words(numerator_try)} {word}"
                             else:
                                 return f"{sign_prefix}{int_to_words(int(fr))} и {int_to_words(numerator_try)} {word}"
-                    # fallback to decimal with words for digits
                     return sign_prefix + decimal_numeric_to_words(fr)
             else:
                 return sign_prefix + int_to_words(int(dec_str))
         else:
-            # есть период — хотим вывести как "целая и непериод и период в периоде"
             nonrep = dec_str.split(".", 1)[1] if "." in dec_str else ""
             if nonrep == "":
                 nonrep_words = "ноль"
             else:
                 nonrep_words = int_to_words(int(nonrep)) if nonrep != "" else "ноль"
             period_words = digits_to_words(period)
-            if int(целая) == 0:
+            if int(entire_function) == 0:
                 return f"{sign_prefix}ноль и {nonrep_words} и {period_words} в периоде"
             else:
-                return f"{sign_prefix}{int_to_words(целая)} и {nonrep_words} и {period_words} в периоде"
+                return f"{sign_prefix}{int_to_words(entire_function)} и {nonrep_words} и {period_words} в периоде"
     else:
         # непериодическая бесконечная десятичная — будем пытаться обнаружить период (общий случай)
         dec_str, period = fraction_to_decimal_with_period(
@@ -289,25 +253,24 @@ def fraction_to_mixed_and_words(fr: Fraction) -> str:
             nonrep = dec_str.split(".", 1)[1] if "." in dec_str else ""
             nonrep_words = int_to_words(int(nonrep)) if nonrep else "ноль"
             period_words = digits_to_words(period_trimmed)
-            if целая == 0:
+            if entire_function == 0:
                 return f"{sign_prefix}ноль и {nonrep_words} и {period_words} в периоде"
             else:
-                return f"{sign_prefix}{int_to_words(целая)} и {nonrep_words} и {period_words} в периоде"
+                return f"{sign_prefix}{int_to_words(entire_function)} и {nonrep_words} и {period_words} в периоде"
 
-    # Если дошли сюда — представим как смешанную дробь (целая и числитель/знаменатель)
-    числитель = дробь.numerator
-    знаменатель = дробь.denominator
-    сокращенная = Fraction(числитель, знаменатель)  # уже сокращено
-    if целая == 0:
-        return f"{sign_prefix}{fraction_to_words(сокращенная)}"
+    # Если дошли сюда — представим как смешанную fraction_function (entire_function и numerator_function/znaminatel_function)
+    numerator_function = fraction_function.numerator
+    znaminatel_function = fraction_function.denominator
+    abbreviation_function = Fraction(numerator_function, znaminatel_function)  # уже сокращено
+    if entire_function == 0:
+        return f"{sign_prefix}{fraction_to_words(abbreviation_function)}"
     else:
-        return f"{sign_prefix}{int_to_words(целая)} и {fraction_to_words(сокращенная)}"
+        return f"{sign_prefix}{int_to_words(entire_function)} и {fraction_to_words(abbreviation_function)}"
 
 
 def decimal_numeric_to_words(fr: Fraction) -> str:
     """
     Преобразует дробь в вид 'целая и X сотых/тысячных' если возможно, иначе в 'целая дробь' словами.
-    Это fallback при сложных ситуациях.
     """
     # попробуем округлить до тысячных и вывести
     val = float(fr)
@@ -334,9 +297,7 @@ def is_terminating_decimal(fr: Fraction) -> bool:
 
 def digits_to_words(digits: str) -> str:
     """
-    Преобразует строку цифр '023' в словесное представление чисел как целое число:
-    'ноль два три' -> но для читаемости вернём как число словами: 23 -> 'двадцать три'
-    Здесь мы интерпретируем строку как число без ведущих нулей.
+    Интерпретируем строку как число без ведущих нулей.
     """
     if digits == "":
         return "ноль"
@@ -346,10 +307,7 @@ def digits_to_words(digits: str) -> str:
 
 def fraction_to_words(fr: Fraction) -> str:
     """
-    Преобразует простую дробь (числитель/знаменатель, правильную) в текст:
-    'три четвертых' и т.п. (знаменатели читаются как порядковые: 2->вторых/вторая, 3->третьих...)
-    — упрощённая реализация: вернёт 'числитель знаменатель-словом' (напр. 'одна третья' или 'одна третьих')
-    Для корректного морфологического согласования нужно больше логики — здесь упрощённо вернём 'числитель знаменатель-ых'
+    Преобразует простую дробь (числитель/знаменатель, правильную) в текст
     """
     num = fr.numerator
     den = fr.denominator
