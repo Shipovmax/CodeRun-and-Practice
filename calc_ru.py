@@ -1009,9 +1009,17 @@ def calc(expression: str) -> str:
 
 
 if __name__ == "__main__":
+    import sys
     try:
-        print("Введите выражение:")
-        user_input = input()
-        print(calc(str(user_input)))
+        # Prefer command-line args; fallback to stdin. No prompts, single-line output.
+        expr = " ".join(sys.argv[1:]).strip()
+        if not expr:
+            data = sys.stdin.read()
+            expr = (data or "").strip()
+        if not expr:
+            sys.exit(0)
+        print(calc(expr))
     except CalcError as e:
-        print(f"Ошибка: {e}")
+        # Print error message only, single line
+        print(str(e))
+        sys.exit(1)
