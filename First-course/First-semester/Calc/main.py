@@ -317,8 +317,7 @@ def fraction_to_words(fr: Fraction) -> str:
 
 def ordinal_name_for_denominator(den: int) -> str:
     """
-    Возвращает слово-форму для знаменателя в родительном/мн.ч. ('третьих', 'пятых').
-    Это упрощение: для 2,3,4 используем особые формы, иначе общая 'х-ых'.
+    Возвращает слово-форму для знаменателя в родительном/мн.ч. ('третьих', 'пятых')
     """
     if den == 2:
         return "вторых"
@@ -437,8 +436,7 @@ def _hundreds_to_words(n: int) -> str:
 
 # ---------- Парсер слов в число ----------
 def parse_simple_number_words(
-        tokens: List[str], start_index: int = 0
-) -> Tuple[int, int]:
+        tokens: List[str], start_index: int = 0) -> Tuple[int, int]:
     """
     Парсит последовательность слов, представляющих целое число (включая сотни, тысячи, миллионы).
     Возвращает (значение, индекс_последнего_слова_в_последовательности).
@@ -479,15 +477,9 @@ def parse_simple_number_words(
     return total, start_index + consumed - 1
 
 
-def parse_fractional_descriptor(
-        tokens: List[str], start_index: int
-) -> Tuple[Fraction, int]:
+def parse_fractional_descriptor(tokens: List[str], start_index: int) -> Tuple[Fraction, int]:
     """
     Парсит дробную часть, начиная с индекс start_index.
-    Возможные формы:
-      - "тридцать одна сотая" -> numerator words + denom-word (сотая/тысячная)
-      - "четыре пятых" -> числитель + порядковое слово (производит Fraction)
-    Также поддерживает форму "одна вторая" и т.п.
     Возвращает (Fraction, last_index).
     Бросает ParseError при некорректности.
     """
@@ -496,20 +488,13 @@ def parse_fractional_descriptor(
     # следующий токен — ожидаемо слово-разряд (сотая/тысячная) или форма 'третий/третьих' (упрощённо — мы ищем слово "сотая" или "тысячная" или любое слово, не число)
     next_idx = idx_num_end + 1
     if next_idx >= len(tokens):
-        raise ParseError(
-            "Ожидается слово-разряд (сотая/тысячная) после числителя дроби"
-        )
+        raise ParseError("Ожидается слово-разряд (сотая/тысячная) после числителя дроби")
     denom_word = tokens[next_idx]
     # Если это стандартная десятичная разрядность
     if denom_word in DECIMAL_DENOMINATORS:
         denom = DECIMAL_DENOMINATORS[denom_word]
         return Fraction(num, denom), next_idx
     else:
-        # Если формируют 'четыре пятых' — попробуем распознать знаменатель из слова (упрощённо)
-        # Попробуем извлечь число из слов, если denom_word — слово, обозначающее число (напр. "пятых" — будем резать окончание)
-        # Найдём в словаре простых чисел основу
-        # Алгоритм упрощён: попытаемся взять denom_word — если это слово есть в SIMPLE_NUM (без окончаний) — используем его
-        # Иначе попытаемся удалить типичные окончания ('ых','ая','ых','ых' и т.д.) и повторно проверить
         base = denom_word
         if base in SIMPLE_NUM:
             denom = SIMPLE_NUM[base]
@@ -529,11 +514,7 @@ def parse_mixed_or_decimal_number(
         tokens: List[str], start_index: int
 ) -> Tuple[Fraction, int]:
     """
-    Парсит число, которое может быть:
-     - целым (например 'пять')
-     - смешанным: 'один и четыре пятых' или 'один и тридцать одна сотая'
-     - десятичной дробью, записанной как 'и ... сотых' (мы поддерживаем только через 'и' как разделитель)
-    Возвращает Fraction и индекс последнего использованного слова.
+    Парсит число, которое может быть: целым, смешанным, десятичной дробью
     """
     # Сначала пробуем целое
     val_int, idx_int_end = parse_simple_number_words(tokens, start_index)
@@ -549,17 +530,10 @@ def parse_mixed_or_decimal_number(
 # ---------- Токенизация входной строки ----------
 def tokenize_expression(expr: str) -> List[Tuple[str, str]]:
     """
-    Токенизирует входную строку в последовательность токенов (type, value):
-      - ('NUMBER', Fraction) для чисел, но пока на этапе токенизации вернём слова и обработаем числа в парсере
-      - ('OP', symbol) для операторов (+ - * / % ^)
-      - ('FUNC', name) для функций (sin/cos/tan) — позиционно ожидается слово 'от' после имени
-      - ('LPAREN'/'RPAREN') для скобок (словесных)
-      - ('COMB', name) для комбинаторики (будем парсить далее)
-      - ('WORD', word) для прочих слов (используется при парсинге чисел)
     Преобразует многословные операторы (например, "остаток от деления") в один токен.
     """
     s = expr.lower()
-    # Нормализация: удалим лишние многопробелы
+    #Удаляем лишние пробелы
     s = re.sub(r"\s+", " ", s).strip()
     tokens_raw = []
     i = 0
@@ -581,11 +555,7 @@ def tokenize_expression(expr: str) -> List[Tuple[str, str]]:
         if matched:
             continue
         # Проверки для функций, у которых форма "синус от"
-        if (
-                i + 1 < n
-                and words[i] in {"синус", "косинус", "тангенс"}
-                and words[i + 1] == "от"
-        ):
+        if (i + 1 < n and words[i] in {"синус", "косинус", "тангенс"} and words[i + 1] == "от"):
             tokens_raw.append(("PHRASE", words[i] + " от"))
             i += 2
             continue
@@ -607,7 +577,7 @@ def tokenize_expression(expr: str) -> List[Tuple[str, str]]:
         tokens_raw.append(("WORD", words[i]))
         i += 1
 
-    # Дополнительная постобработка: свёртка фраз в операторы, функции и скобки
+    # Свёртка фраз в операторы, функции и скобки
     tokens: List[Tuple[str, str]] = []
     for typ, val in tokens_raw:
         if typ == "PHRASE":
@@ -638,10 +608,8 @@ def tokenize_expression(expr: str) -> List[Tuple[str, str]]:
     return tokens
 
 
-# ---------- Построение выражения в ОПЗ (shunting-yard) и парсинг чисел ----------
-def shunting_yard_with_numbers(
-        tokens: List[Tuple[str, str]],
-) -> List[Tuple[str, Union[str, Fraction]]]:
+# ---------- Построение выражения в ОПЗ и парсинг чисел ----------
+def shunting_yard_with_numbers(tokens: List[Tuple[str, str]],) -> List[Tuple[str, Union[str, Fraction]]]:
     """
     Преобразует токены в обратную польскую запись (RPN), одновременно собирая числа.
     Возвращает список RPN-элементов: ('NUM', Fraction) или ('OP', symbol) или ('FUNC', name) или ('COMB', name)
@@ -649,34 +617,28 @@ def shunting_yard_with_numbers(
     output_queue: List[Tuple[str, Union[str, Fraction]]] = []
     operator_stack: List[Tuple[str, str]] = []
 
-    # Преобразуем поток токенов (WORD/FUNC/OP/LPAREN/RPAREN/COMB) в поток, где числа собираются
+    # Преобразуем поток токенов в числовой поток
     i = 0
     length = len(tokens)
 
     while i < length:
         tok_type, tok_val = tokens[i]
         if tok_type == "WORD":
-            # Слова могут быть началом числа (например 'двадцать', 'пять', 'один')
-            # Пытаемся распознать смешанное/десятичное число, если не получится — это ошибка
-            # Соберём последовательность слов, относящуюся к числу
+            # Собираем последовательность слов, относящуюся к числу
             j = i
             word_seq = []
             while j < length and tokens[j][0] == "WORD":
                 word_seq.append(tokens[j][1])
                 # заранее останавливаем, если следующими идут операторы/функции/скобки/COMB
-                # но на этапе while мы просто соберём широкую последовательность и попытаемся распознать
                 j += 1
             # Попробуем распознать число начиная от i:
             try:
                 num, last_idx = parse_mixed_or_decimal_number([w for w in word_seq], 0)
-                # last_idx — индекс внутри word_seq; реальный индекс в tokens = i + last_idx
                 consumed = last_idx + 1
                 output_queue.append(("NUM", num))
                 i += consumed
                 continue
             except ParseError as e:
-                # Если не удалось распознать число — возможно это слово-пломба (напр. "минус" как оператор)
-                # поэтому попробуем поставить это слово обратно как отдельный токен
                 # Но если слово не оператор — выдаём ошибку
                 if tok_val in {"плюс", "минус", "умножить", "разделить"}:
                     # не должно случаться — эти слова обычно распарсены ранее как PHRASE->OP
@@ -688,7 +650,6 @@ def shunting_yard_with_numbers(
                         f"Не удалось распознать число из слов: {' '.join(word_seq[:5])}... ({e})"
                     )
         elif tok_type == "NUM":
-            # в нашем tokenize этого не бывает; но оставлено для полноты
             output_queue.append(("NUM", tok_val))
             i += 1
         elif tok_type == "OP":
@@ -699,9 +660,7 @@ def shunting_yard_with_numbers(
                 top_type, top_val = operator_stack[-1]
                 if top_type == "OP":
                     top_prec, _ = _operator_props(top_val)
-                    if (assoc == "left" and prec <= top_prec) or (
-                            assoc == "right" and prec < top_prec
-                    ):
+                    if (assoc == "left" and prec <= top_prec) or (assoc == "right" and prec < top_prec):
                         output_queue.append(("OP", top_val))
                         operator_stack.pop()
                         continue
@@ -718,11 +677,6 @@ def shunting_yard_with_numbers(
         elif tok_type == "COMB":
             # Комбинаторика — ожидаем далее числа: форма "перестановок из N" или "размещений из N по K"
             comb_kind = tok_val  # 'перестановок'/'размещений'/'сочетаний'
-            # Разбор далее:
-            # ожидается: номер N (числа словами), затем возможно 'по' и число K
-            # Пропустим слово 'из' если оно отдельно
-            # Найдём следующие WORD-последовательности и распознаем числа
-            # Build small slice from tokens
             j = i + 1
             # Сбор слов после COMB: пропускаем 'из' если есть
             if j < length and tokens[j][0] == "WORD" and tokens[j][1] == "из":
@@ -737,9 +691,7 @@ def shunting_yard_with_numbers(
                 word_seq.append(tokens[k][1])
                 k += 1
             if not word_seq:
-                raise ParseError(
-                    "Ожидалось число после '... из' в комбинаторной операции"
-                )
+                raise ParseError("Ожидалось число после '... из' в комбинаторной операции")
             n_val, _ = parse_mixed_or_decimal_number(word_seq, 0)
             # Теперь проверим есть ли 'по' и второе число
             if k < length and tokens[k][0] == "WORD" and tokens[k][1] == "по":
@@ -750,16 +702,11 @@ def shunting_yard_with_numbers(
                     word_seq2.append(tokens[l][1])
                     l += 1
                 if not word_seq2:
-                    raise ParseError(
-                        "Ожидалось число после 'по' в комбинаторной операции"
-                    )
+                    raise ParseError("Ожидалось число после 'по' в комбинаторной операции")
                 k_val, _ = parse_mixed_or_decimal_number(word_seq2, 0)
-                # запишем как встроенную функцию: ('COMB', (kind, n_val, k_val))
                 output_queue.append(("COMB", (comb_kind, n_val, k_val)))
-                # передвинем i до l
                 i = l
             else:
-                # только N (для перестановок)
                 output_queue.append(("COMB", (comb_kind, n_val, None)))
                 i = k
         elif tok_type == "LPAREN":
@@ -776,13 +723,10 @@ def shunting_yard_with_numbers(
                 else:
                     output_queue.append((top_type, top_val))
             if not found:
-                raise ParseError(
-                    "Несбалансированные скобки (найдена закрывающая без открывающей)"
-                )
+                raise ParseError("Несбалансированные скобки (найдена закрывающая без открывающей)")
             i += 1
         else:
             raise ParseError(f"Неизвестный тип токена: {tok_type}")
-    # выталкиваем оставшиеся операторы
     while operator_stack:
         top_type, top_val = operator_stack.pop()
         if top_type in ("LPAREN", "RPAREN"):
@@ -796,7 +740,6 @@ def _operator_props(symbol: str) -> Tuple[int, str]:
     for k, v in OPERATORS.items():
         if v["symbol"] == symbol:
             return v["precedence"], v["assoc"]
-    # кастомные: '^' уже добавлен, '%' тоже
     if symbol == "^":
         return (3, "right")
     if symbol == "*":
@@ -817,14 +760,12 @@ def _operator_props(symbol: str) -> Tuple[int, str]:
 def evaluate_rpn(rpn: List[Tuple[str, Union[str, Fraction]]]) -> Fraction:
     """
     Вычисляет выражение в обратной польской нотации.
-    Возвращает Fraction (для тригонометрии/степеней — приближённое представление в Fraction через limit_denominator).
     """
     stack: List[Fraction] = []
     for elem_type, elem_val in rpn:
         if elem_type == "NUM":
             stack.append(elem_val)
         elif elem_type == "OP":
-            # оператор бинарный; поддерживаем унарный минус как отдельную логику не здесь (мы превращали минус в унарный заранее)
             if len(stack) < 2:
                 raise ParseError("Недостаточно операндов для бинарной операции")
             b = stack.pop()
@@ -842,15 +783,9 @@ def evaluate_rpn(rpn: List[Tuple[str, Union[str, Fraction]]]) -> Fraction:
             elif elem_val == "%":
                 if b == 0:
                     raise MathError("Деление на ноль для операции остатка")
-                # для остатка работаем с целыми: приведём к целому через floor, но если дробные — применим Fraction numerator%denom
-                # Нормализуем: реализуем a % b как Fraction(a.numerator/a.denominator % b.numerator/b.denominator)
-                # Преобразуем в вещественные дроби с ограничением — но проще: a % b = a - b * floor(a/b)
                 quotient_floor = a // b
                 stack.append(a - b * quotient_floor)
             elif elem_val == "^":
-                # возведение в степень — поддерживаем целочисленные степени и дробные основания
-                # если степень большая и нецелая — используем float и затем приближаем обратно в Fraction
-                # Если степень — fraction с denominator==1 (целая)
                 if b.denominator != 1:
                     # нецелая степень — используем float
                     val = float(a) ** float(b)
@@ -887,7 +822,6 @@ def evaluate_rpn(rpn: List[Tuple[str, Union[str, Fraction]]]) -> Fraction:
             # оба n_val и k_val — Fraction; ожидаем целые
             n = int(n_val)
             if k_val is None:
-                # перестановки: n!
                 if n < 0:
                     raise MathError("n для перестановок должен быть неотрицательным")
                 result = factorial(n)
@@ -895,21 +829,18 @@ def evaluate_rpn(rpn: List[Tuple[str, Union[str, Fraction]]]) -> Fraction:
             else:
                 k = int(k_val)
                 if kind == "перестановок":
-                    # перестановки из n по k — обычно nPk = n! / (n-k)!
                     if k > n or n < 0 or k < 0:
                         stack.append(Fraction(0))
                     else:
                         result = factorial(n) // factorial(n - k)
                         stack.append(Fraction(result))
                 elif kind == "размещений":
-                    # размещений — аналогично размещениям (размещений из n по k == nPk)
                     if k > n or n < 0 or k < 0:
                         stack.append(Fraction(0))
                     else:
                         result = factorial(n) // factorial(n - k)
                         stack.append(Fraction(result))
                 elif kind == "сочетаний":
-                    # nCk = n! / (k!(n-k)!)
                     if k > n or n < 0 or k < 0:
                         stack.append(Fraction(0))
                     else:
@@ -920,9 +851,7 @@ def evaluate_rpn(rpn: List[Tuple[str, Union[str, Fraction]]]) -> Fraction:
         else:
             raise ParseError(f"Неподдерживаемый элемент RPN: {elem_type}")
     if len(stack) != 1:
-        raise ParseError(
-            "Некорректное выражение (после вычисления остаётся более одного значения на стеке)"
-        )
+        raise ParseError("Некорректное выражение (после вычисления остаётся более одного значения на стеке)")
     return stack[0]
 
 
@@ -931,11 +860,6 @@ def calc(expression: str) -> str:
     """
     Вход: строка-выражение на русском языке.
     Выход: строка с текстовым представлением результата.
-    Основные шаги:
-      1) Токенизировать фразы
-      2) Построить ОПЗ (RPN), распознав числа как Fraction
-      3) Вычислить RPN -> Fraction
-      4) Преобразовать Fraction в удобочитаемый русский текст (с дробями/десятичными/периодом)
     """
     if not isinstance(expression, str) or not expression.strip():
         raise ParseError("Пустая строка. Ожидается выражение.")
@@ -943,23 +867,15 @@ def calc(expression: str) -> str:
     # Нормализация и замены для удобства: 'пи' -> numeric token
     expr = expression.lower()
     expr = expr.replace("π", "пи")
-    # Заменим слово 'пи' на эквивалент вещественной константы — представим как 'число' токен
-    # Но можно оставить как слово и при парсинге интерпретировать 'пи' как число
     # Выполним токенизацию
     tokens = tokenize_expression(expr)
 
     # На стадии токенов обработаем простые случаи 'пи' как WORD -> заменим на NUM
-    # Но наша shunting_yard ожидает WORD и попытается распознать числа из последовательности слов.
-    # Поэтому преобразуем в tokens: если WORD == 'пи' — заменяем на ('NUM', Fraction(pi).limit_denominator())
-    # Чтобы сохранить точность, представим пи как Fraction(round(pi,6)).limit_denominator(10**6)
-    # Хотя тригонометрические функции обычно принимают аргументы в радианах, и нам удобно иметь pi.
     tokens_transformed: List[Tuple[str, str]] = []
     i = 0
     while i < len(tokens):
         ttype, tval = tokens[i]
         if ttype == "WORD" and tval == "пи":
-            # заменяем на NUM
-            # представим пи как Fraction(pi) approximated
             frac_pi = Fraction(str(pi)).limit_denominator(10 ** 6)
             # вставляем специальный токен NUM (для последующей обработки)
             tokens_transformed.append(("NUM", frac_pi))
@@ -968,15 +884,6 @@ def calc(expression: str) -> str:
             tokens_transformed.append((ttype, tval))
             i += 1
 
-    # Далее нам нужно, чтобы shunting_yard_with_numbers мог работать со 'NUM' токенами и конструкциями WORD.
-    # Однако его реализация ожидает WORD и внутренне вызывает parse_mixed_or_decimal_number.
-    # Мы упрощаем: заменим токен 'NUM' на ('WORD', string-repr) так как shunting_yard_with_numbers при видении WORD
-    # пытается распознать числа из последовательности слов. Но у нас NUM уже содержит Fraction.
-    # Чтобы обработать NUM, будем вставлять ('NUM', Fraction) и чуть-чуть изменим shunting_yard_with_numbers — он умеет с NUM.
-    # Поэтому используем уже существующие tokens_transformed.
-
-    # Приводим все 'WORD' токены, заменяя None и т.п.
-    # В shunting_yard_with_numbers ожидается список токенов с типами WORD/OP/FUNC/COMB/LPAREN/RPAREN/NUM
     rpn_input = []
     for ttype, tval in tokens_transformed:
         if ttype == "NUM":
@@ -984,11 +891,8 @@ def calc(expression: str) -> str:
         else:
             rpn_input.append((ttype, tval))
 
-    # Теперь построение RPN: сначала простейший подход — преобразуем WORD-последовательности в NUM внутри shunting_yard_with_numbers
     rpn = shunting_yard_with_numbers(rpn_input)
 
-    # Но shunting_yard_with_numbers формирует список с ('NUM', Fraction) или ('OP','+') etc.
-    # Преобразуем его к форме, ожидаемой evaluate_rpn: ('NUM',Fraction) -> ('NUM',Fraction), ('OP', '+')->('OP','+'), ('FUNC',name)
     # Вычисляем значение
     result_fraction = evaluate_rpn(rpn)
 
