@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 import re
-from copy import deepcopy
 from fractions import Fraction
 from math import sin, cos, tan, pi, factorial
 from typing import List, Tuple, Union, Optional
